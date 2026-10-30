@@ -14,9 +14,14 @@ export function initAudio() {
     master = ctx.createGain();
     master.gain.value = 0.45;
     master.connect(ctx.destination);
+    // Begrenser etter forsterkningen, så de sterkeste replikkene ikke skurrer
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -6; limiter.knee.value = 4; limiter.ratio.value = 12;
+    limiter.attack.value = 0.003; limiter.release.value = 0.15;
+    limiter.connect(ctx.destination);
     voiceOut = ctx.createGain();
     voiceOut.gain.value = 1;
-    voiceOut.connect(ctx.destination);
+    voiceOut.connect(limiter);
   }
   ctx?.resume?.();
   // iOS slipper bare til tale som startes fra et trykk
@@ -41,14 +46,24 @@ export async function loadClips() {
   } catch { /* ingen lydfiler: spillet bruker talesyntese */ }
 }
 
-/** Lydeffektene fra ElevenLabs har svært ulik styrke; dette jevner dem ut. */
+// Replikkene jevnes ut mot denne lydstyrken (RMS over partiene med lyd). Uten dette lå f.eks.
+// Lille Lurv (sjenert) 12 dB lavere enn Kjempetrollet.
+const SPEECH_TARGET_DB = -16;
+
+/** Måler topp og lydstyrke. Lydeffektene jevnes ut på topp, replikkene på lydstyrke. */
 function normalize(buf) {
-  let peak = 0;
+  let peak = 0, sum = 0, n = 0;
   for (let c = 0; c < buf.numberOfChannels; c++) {
     const d = buf.getChannelData(c);
-    for (let i = 0; i < d.length; i += 16) peak = Math.max(peak, Math.abs(d[i]));
+    for (let i = 0; i < d.length; i += 8) {
+      const a = Math.abs(d[i]);
+      if (a > peak) peak = a;
+      if (a > 0.01) { sum += a * a; n++; }
+    }
   }
   buf.gain = peak > 0.01 ? Math.min(4, 0.9 / peak) : 1;
+  const rms = Math.sqrt(sum / Math.max(1, n));
+  buf.speechGain = rms > 0.001 ? Math.min(4, Math.max(0.6, 10 ** (SPEECH_TARGET_DB / 20) / rms)) : 1;
   return buf;
 }
 
@@ -80,7 +95,7 @@ async function playSpeechClip(file) {
   const buf = await getBuffer(file);
   if (!buf) return false;
   stopSpeech();
-  const src = playBuffer(buf, voiceOut);
+  const src = playBuffer(buf, voiceOut, buf.speechGain);
   currentClip = src;
   // Sikring: dialogen skal aldri bli hengende om 'ended' uteblir
   await new Promise((r) => { src.onended = r; setTimeout(r, buf.duration * 1000 + 800); });
