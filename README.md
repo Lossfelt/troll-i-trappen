@@ -51,6 +51,10 @@ Bytt stemme for en figur i `CAST` øverst i `tools/generate-audio.mjs`. Det som 
 
 Spillet er helt statisk og trenger ingen backend. GitHub Pages publiserer `main` fra rotmappen hver gang du pusher. Navn og trollbok ligger bare i spillerens nettleser (`localStorage`).
 
+Spillet kan legges på Hjem-skjermen på mobil (`manifest.webmanifest`) og åpnes da i fullskjerm.
+
+Ikonene og delingsbildet i `icons/` er laget med OpenAI sitt bilde-API: `node tools/generate-images.mjs` lager originalene (krever `OPENAI_API_KEY`), og `tools/resize-images.ps1` skalerer dem til riktige størrelser.
+
 ## Kjøre lokalt
 
 ES-moduler må serveres over HTTP:

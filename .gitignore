@@ -9,3 +9,4 @@ tools/library-no.json
 
 # Lokalt oppsett for Claude Code
 .claude/
+tools/image-originals/
