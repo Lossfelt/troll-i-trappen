@@ -1,5 +1,7 @@
 # Troll i trappen
 
+**Spill her: https://lossfelt.github.io/troll-i-trappen/**
+
 Et lite three.js-spill for mobil og PC om en treåring som går rundt i huset om kvelden og møter troll. Målet er å finne bamsen og komme seg opp trappen til senga, forbi Trappetrollet.
 
 Hvert troll har en personlighet som avgjør hvilket valg som virker best:
@@ -44,6 +46,10 @@ Verktøy for å velge stemmer:
 - `node tools/voice-variants.mjs` sammenligner stemmer, tagger og modeller for utvalgte figurer
 
 Bytt stemme for en figur i `CAST` øverst i `tools/generate-audio.mjs`. Det som leses høyt, bruker aldri guttens navn, så lydfilene passer for alle.
+
+## Publisering
+
+Spillet er helt statisk og trenger ingen backend. GitHub Pages publiserer `main` fra rotmappen hver gang du pusher. Navn og trollbok ligger bare i spillerens nettleser (`localStorage`).
 
 ## Kjøre lokalt
 
