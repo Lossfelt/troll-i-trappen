@@ -199,7 +199,7 @@ function frame(now) {
 
 // Lokal testing: ?debug gir tilgang til tilstanden og lar oss spole fram
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__troll = { G, K, enc, newRound: rounds.newRound, startChase, tick: (s) => { for (let i = 0; i < s * 30; i++) update(last + 1000 / 30); } };
+  window.__troll = { G, K, enc, input, newRound: rounds.newRound, startChase, tick: (s) => { for (let i = 0; i < s * 30; i++) update(last + 1000 / 30); } };
 }
 
 function update(now) {

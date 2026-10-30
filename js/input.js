@@ -6,6 +6,10 @@ const DEAD_ZONE = 0.15;
 /** Styrespaken. Returnerer en funksjon som gir retning og fart (mag 0.35–1), eller null. */
 function createStick(el) {
   if (!el) return () => null;
+  // Noen mobilnettlesere melder ikke «grov peker» (f.eks. i skrivebordsmodus), så vi ser også etter berøring
+  const showTouch = () => document.documentElement.classList.add('touch');
+  if (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) showTouch();
+  window.addEventListener('touchstart', showTouch, { once: true, passive: true });
   const knob = el.querySelector('i');
   const v = { x: 0, z: 0, active: false };
   const move = (e) => {

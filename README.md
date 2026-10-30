@@ -49,7 +49,7 @@ Bytt stemme for en figur i `CAST` øverst i `tools/generate-audio.mjs`. Det som 
 
 ## Publisering
 
-Spillet er helt statisk og trenger ingen backend. GitHub Pages publiserer `main` fra rotmappen hver gang du pusher. Navn og trollbok ligger bare i spillerens nettleser (`localStorage`).
+Spillet er helt statisk og trenger ingen backend. Arbeidsflyten `.github/workflows/pages.yml` publiserer til GitHub Pages hver gang du pusher til `main`. Før opplasting får alle JavaScript-modulene commit-ID-en som versjon (`tools/stamp-version.mjs`). GitHub Pages lar nettlesere bufre filer i 10 minutter, og uten versjon kunne en telefon blande gammel og ny kode. Navn og trollbok ligger bare i spillerens nettleser (`localStorage`).
 
 Spillet kan legges på Hjem-skjermen på mobil (`manifest.webmanifest`) og åpnes da i fullskjerm.
 
