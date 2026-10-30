@@ -27,7 +27,7 @@ export function createKidController(G, input) {
 
   /** Flytter gutten ett steg. Returnerer om han faktisk gikk. */
   K.move = (dt) => {
-    let dir = input.keyDir(), maxStep = Infinity;
+    let dir = input.keyDir() || input.stickDir(), maxStep = Infinity;
     if (dir) G.path = null;
     else if (G.path) {
       while (G.path.length && Math.hypot(G.path[0].x - K.pos.x, G.path[0].z - K.pos.z) < 0.08) G.path.shift();
@@ -39,7 +39,7 @@ export function createKidController(G, input) {
       }
     }
     if (!dir) return false;
-    const speed = G.mode === 'chase' ? 3.6 : 2.4, len = Math.min(speed * dt, maxStep);
+    const speed = G.mode === 'chase' ? 3.6 : 2.4, len = Math.min(speed * dt * (dir.mag ?? 1), maxStep);
     const bx = K.pos.x, bz = K.pos.z;
     K.pos.x += dir.x * len; K.pos.z += dir.z * len;
     collideCircle(K.pos, KID_R, G.house.boxes, 'kid');
