@@ -2,7 +2,8 @@
 // ellers syntetiske lydeffekter og nettleserens talesyntese.
 import { KID, TROLL } from './lines.js';
 
-let ctx = null, master = null, voiceOut = null, soundOn = true, voiceOn = true, voices = [];
+let ctx = null, master = null, voiceOut = null, sfxBus = null, soundOn = true, voiceOn = true, voices = [];
+let talking = 0; // antall replikker som spilles nå; da dempes musikk og effekter
 let manifest = { speech: {}, sfx: {} };
 const buffers = new Map();
 let currentClip = null;
@@ -22,6 +23,8 @@ export function initAudio() {
     voiceOut = ctx.createGain();
     voiceOut.gain.value = 1;
     voiceOut.connect(limiter);
+    sfxBus = ctx.createGain();
+    sfxBus.connect(ctx.destination);
   }
   ctx?.resume?.();
   // iOS slipper bare til tale som startes fra et trykk
@@ -153,9 +156,20 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
  * Løses når opplesningen er ferdig, eller etter et anslag uten tale.
  */
 export async function say(text, who = 'troll') {
-  const file = manifest.speech[`${who}|${text}`];
-  if (file && ctx && voiceOn && soundOn && await playSpeechClip(file)) return;
-  return speak(text, ROLES[who] ? who : TROLL_ROLE[who] || 'troll');
+  duck(1);
+  try {
+    const file = manifest.speech[`${who}|${text}`];
+    if (file && ctx && voiceOn && soundOn && await playSpeechClip(file)) return;
+    return await speak(text, ROLES[who] ? who : TROLL_ROLE[who] || 'troll');
+  } finally {
+    duck(-1);
+  }
+}
+
+/** Demper musikk og lydeffekter mens noen snakker, så stemmen høres. */
+function duck(delta) {
+  talking = Math.max(0, talking + delta);
+  if (sfxBus) sfxBus.gain.setTargetAtTime(talking > 0 ? 0.25 : 1, ctx.currentTime, talking > 0 ? 0.05 : 0.3);
 }
 
 function speak(text, who) {
@@ -226,13 +240,16 @@ const synth = {
   night: () => [784, 659, 523, 587, 523, 392, 523].forEach((f, i) => tone(f, 0.5, { vol: 0.12, delay: i * 0.36 })),
 };
 
+// Vuggevisen er bakgrunnsmusikk under «God natt», så den skal ligge lavere enn effektene
+const SFX_LEVEL = { night: 0.5 };
+
 // Innspilte effekter brukes når de finnes; ellers den syntetiske varianten
 export const sfx = new Proxy(synth, {
   get(target, name) {
     return (...args) => {
       const file = manifest.sfx[name];
       if (!file || !ctx || !soundOn) return target[name]?.(...args);
-      getBuffer(file).then((buf) => (buf ? playBuffer(buf, ctx.destination, 0.6 * buf.gain) : target[name]?.(...args)));
+      getBuffer(file).then((buf) => (buf ? playBuffer(buf, sfxBus, 0.6 * buf.gain * (SFX_LEVEL[name] ?? 1)) : target[name]?.(...args)));
     };
   },
 });
