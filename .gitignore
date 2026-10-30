@@ -1,0 +1,11 @@
+# Hemmeligheter
+.env
+
+# Lokale lytteprøver og logger fra lydskriptene
+tools/voice-previews/
+tools/*.html
+tools/generate.log
+tools/library-no.json
+
+# Lokalt oppsett for Claude Code
+.claude/

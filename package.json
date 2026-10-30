@@ -1,0 +1,9 @@
+{
+  "name": "troll-i-trappen",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node serve.mjs",
+    "audio": "node tools/generate-audio.mjs"
+  }
+}

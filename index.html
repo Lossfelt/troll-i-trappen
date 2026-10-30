@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="nb">
+<meta charset="utf-8">
+<title>Troll i trappen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141b2b">
+<meta name="description" content="Et lite 3D-spill for de minste: finn bamsen og kom deg opp trappen til senga, forbi trollene i huset. Løp, forhandle, rop «Gå vekk!» eller bli venner.">
+<meta property="og:title" content="Troll i trappen">
+<meta property="og:description" content="Finn bamsen og kom deg opp trappen til senga, forbi trollene i huset.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23203328'/%3E%3Ccircle cx='32' cy='36' r='18' fill='%237f8f5c'/%3E%3Cellipse cx='32' cy='42' rx='5' ry='7' fill='%236b7a4b'/%3E%3Ccircle cx='25' cy='31' r='4' fill='%23fff'/%3E%3Ccircle cx='39' cy='31' r='4' fill='%23fff'/%3E%3Ccircle cx='25' cy='32' r='2' fill='%23111'/%3E%3Ccircle cx='39' cy='32' r='2' fill='%23111'/%3E%3Cpath d='M28 10l4 10 4-10' fill='%232f5a2e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Grandstander:wght@600;800&display=swap">
+<style>
+  :root {
+    /* Layout: fullskjerms 3D-hus om kvelden; HUD øverst, møtepanel nederst som malte granplater med okerkant */
+    --natt: #141b2b;
+    --gran: #203328;
+    --gran-lys: #2c4636;
+    --oker: #e3a93c;
+    --oker-mork: #7a4f12;
+    --tyttebaer: #c7432e;
+    --mose: #a7c86c;
+    --lys: #fff3d9;
+    --dempet: #cfc6ad;
+    --barn: #9fc4ff;
+    --boble: #fff3d9;
+    --boble-troll: #dfe9c8;
+    --blekk: #2a2018;
+    --skygge: rgba(8, 11, 20, .6);
+    --glass: rgba(20, 27, 43, .8);
+    --f-display: 'Grandstander', 'Trebuchet MS', system-ui, sans-serif;
+    --f-body: 'Andika', Verdana, system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--natt); color: var(--lys);
+    font: 16px/1.45 var(--f-body); overflow: hidden; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  #game { position: fixed; inset: 0; overflow: hidden; }
+  #c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--oker); outline-offset: 2px; }
+
+  .panel {
+    background: var(--gran); border: 3px solid var(--oker); border-radius: 22px;
+    outline: 1.5px solid rgba(227, 169, 60, .5); outline-offset: -10px;
+    box-shadow: 0 18px 50px var(--skygge);
+  }
+  .pill {
+    background: var(--glass); border: 2px solid rgba(227, 169, 60, .55); border-radius: 999px;
+    padding: 6px 14px; font-family: var(--f-display); font-weight: 800; font-size: 1.05rem; white-space: nowrap;
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0; pointer-events: none;
+    display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "status goal btns";
+    align-items: center; gap: 8px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px)) 0 calc(10px + env(safe-area-inset-left, 0px));
+  }
+  #status { grid-area: status; display: flex; gap: 10px; font-variant-numeric: tabular-nums; }
+  #goal { grid-area: goal; justify-self: center; color: var(--oker); }
+  .hud-btns { grid-area: btns; display: flex; gap: 8px; pointer-events: auto; }
+  .icon-btn {
+    width: 46px; height: 46px; border-radius: 50%; background: var(--glass);
+    border: 2px solid rgba(227, 169, 60, .55); font-size: 1.3rem; display: grid; place-items: center; padding: 0;
+  }
+  @media (max-width: 560px) {
+    #hud { grid-template-areas: "status . btns" "goal goal goal"; }
+    .pill { font-size: .95rem; }
+  }
+  #inv {
+    position: absolute; left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    pointer-events: none; font-size: 1.2rem;
+  }
+  #inv small { font-family: var(--f-body); font-weight: 700; font-size: .8rem; color: var(--dempet); margin-right: 6px; }
+
+  #toast {
+    position: absolute; left: 50%; top: calc(110px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -8px);
+    font-family: var(--f-display); font-weight: 800; font-size: 1.6rem; color: var(--lys); width: max-content; max-width: 88vw; text-align: center; line-height: 1.2;
+    text-shadow: 0 2px 0 var(--natt), 0 0 18px var(--natt); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(199, 67, 46, .55)); }
+  #flash.on { animation: flash .7s ease-out; }
+  @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* Snakkebobler */
+  #bubbles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .bubble {
+    position: absolute; left: 0; top: 0; max-width: min(62vw, 260px); padding: 8px 12px; border-radius: 16px;
+    background: var(--boble); color: var(--blekk); font-family: var(--f-display); font-weight: 600;
+    font-size: 1rem; line-height: 1.25; text-align: center; box-shadow: 0 6px 16px var(--skygge);
+  }
+  .bubble::after {
+    content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+    border: 8px solid transparent; border-top-color: var(--boble); border-bottom: 0;
+  }
+  .bubble.troll { background: var(--boble-troll); }
+  .bubble.troll::after { border-top-color: var(--boble-troll); }
+
+  /* Jakt */
+  #chaseBar {
+    position: absolute; left: 50%; transform: translateX(-50%); top: calc(104px + env(safe-area-inset-top, 0px));
+    display: flex; align-items: center; gap: 10px; pointer-events: none;
+    font-family: var(--f-display); font-weight: 800; font-size: 1.5rem; color: var(--tyttebaer);
+    text-shadow: 0 2px 0 var(--natt);
+  }
+  #chaseBar .track { width: min(46vw, 220px); height: 14px; border-radius: 99px; background: var(--glass); border: 2px solid var(--oker); overflow: hidden; }
+  #chaseFill { display: block; height: 100%; background: var(--oker); transform-origin: left; }
+
+  /* Møtedialog */
+  #dialog {
+    position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center;
+    padding: 0 calc(10px + env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) calc(10px + env(safe-area-inset-left, 0px));
+    animation: rise .35s ease-out;
+  }
+  @keyframes rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  #dialog .panel { width: min(700px, 100%); padding: 14px 16px 16px; display: grid; gap: 12px; }
+  .dlg-head { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
+  .dlg-head > div { min-width: 0; }
+  #dlgPortrait {
+    width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--oker);
+    background: radial-gradient(circle at 50% 40%, var(--gran-lys), var(--natt)); object-fit: cover;
+  }
+  #dlgName { font-family: var(--f-display); font-weight: 800; font-size: 1.35rem; line-height: 1.1; margin: 0; color: var(--oker); }
+  #dlgMood { font-size: .85rem; color: var(--dempet); }
+  #dlgText { font-size: 1.15rem; line-height: 1.35; margin: 6px 0 0; min-height: 2.7em; }
+  #dlgText strong { color: var(--mose); }
+  #dlgText.kid strong { color: var(--barn); }
+  #choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #choices:empty { display: none; }
+  @media (min-width: 640px) { #choices { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .choice {
+    min-height: 62px; border-radius: 16px; background: var(--gran-lys); border: 2px solid var(--oker);
+    display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 10px;
+    font-family: var(--f-display); font-weight: 800; font-size: 1.15rem; transition: transform .12s, background .12s;
+  }
+  .choice:hover { background: #355540; }
+  .choice:active { transform: scale(.96); }
+  .choice .ic { font-size: 1.7rem; line-height: 1; }
+  .choice.primary { grid-column: 1 / -1; background: var(--tyttebaer); border-color: var(--lys); }
+  @media (max-height: 460px) {
+    #dlgPortrait { width: 56px; height: 56px; }
+    #dlgText { font-size: 1rem; min-height: 0; }
+    .choice { min-height: 48px; }
+  }
+
+  /* Skjermer */
+  .screen {
+    position: fixed; inset: 0; display: flex; flex-direction: column; overflow-y: auto;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: radial-gradient(ellipse at 50% 35%, rgba(20, 27, 43, .25), rgba(10, 13, 22, .88));
+  }
+  .screen .panel { margin: auto; width: min(520px, 100%); padding: 26px 22px 24px; display: grid; gap: 14px; position: relative; }
+  .eyebrow { margin: 0; text-transform: uppercase; letter-spacing: .16em; font-size: .78rem; font-weight: 700; color: var(--mose); }
+  h1, h2 { font-family: var(--f-display); font-weight: 800; margin: 0; color: var(--oker); text-wrap: balance; }
+  h1 { font-size: clamp(2.6rem, 12vw, 4rem); line-height: .92; letter-spacing: -.01em; text-shadow: 0 3px 0 var(--oker-mork); }
+  h2 { font-size: clamp(1.8rem, 8vw, 2.6rem); line-height: 1; }
+  .lead { margin: 0; color: var(--lys); max-width: 60ch; }
+  .muted { margin: 0; color: var(--dempet); font-size: .9rem; }
+  #peek { display: flex; justify-content: center; gap: 4px; margin: -70px 0 -6px; height: 84px; pointer-events: none; }
+  #peek img { width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 6px 8px var(--skygge)); }
+  #peek img:nth-child(2) { transform: translateY(-14px) scale(1.12); }
+  label.field { display: grid; gap: 6px; font-weight: 700; }
+  #heroName {
+    font: 700 1.2rem var(--f-display); color: var(--blekk); background: var(--lys); border: 2px solid var(--oker);
+    border-radius: 14px; padding: 10px 14px; user-select: text; -webkit-user-select: text; width: 100%;
+  }
+  fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  legend { font-weight: 700; padding: 0; margin-bottom: 6px; }
+  .swatch { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: .95rem; }
+  .swatch input { position: absolute; opacity: 0; pointer-events: none; }
+  .swatch span { width: 30px; height: 30px; border-radius: 50%; background: var(--c); border: 3px solid var(--gran-lys); box-shadow: 0 0 0 2px transparent; transition: box-shadow .15s; }
+  .swatch input:checked + span { box-shadow: 0 0 0 3px var(--oker); }
+  .swatch input:focus-visible + span { outline: 3px solid var(--lys); outline-offset: 2px; }
+  .toggle { display: flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; }
+  .toggle input { width: 22px; height: 22px; accent-color: var(--oker); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn {
+    flex: 1 1 auto; min-height: 56px; padding: 10px 18px; border-radius: 16px;
+    font-family: var(--f-display); font-weight: 800; font-size: 1.2rem; border: 2px solid var(--oker); background: var(--gran-lys);
+  }
+  .btn.primary { background: var(--tyttebaer); border-color: var(--lys); }
+  .big-emoji { font-size: 3.4rem; margin: 0; line-height: 1; }
+  #endStats { font-family: var(--f-display); font-weight: 800; font-size: 1.15rem; margin: 0; color: var(--oker); }
+  .screen .panel.book { width: min(720px, 100%); }
+  #bookGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .card { background: var(--gran-lys); border-radius: 16px; padding: 12px 8px; display: grid; gap: 2px; justify-items: center; text-align: center; }
+  .card img { width: 84px; height: 84px; object-fit: contain; }
+  .card.unknown img { filter: brightness(0) opacity(.5); }
+  .card b { font-family: var(--f-display); font-size: 1.05rem; }
+  .card small { color: var(--dempet); font-size: .8rem; }
+  .card .count { color: var(--mose); font-weight: 700; }
+  .choice.friend { grid-column: 1 / -1; background: #3d6a3a; border-color: var(--mose); }
+  .choice.shout { min-height: 84px; font-size: 1.5rem; touch-action: manipulation; }
+  .choice.shout.pop { animation: pop .15s ease-out; }
+  @keyframes pop { 50% { transform: scale(1.06); } }
+  .bubble.loud { font-size: 1.5rem; font-weight: 800; color: var(--tyttebaer); }
+  #meter { display: grid; gap: 6px; }
+  .mbar { position: relative; height: 22px; border-radius: 99px; background: var(--natt); border: 2px solid var(--oker); overflow: hidden; }
+  #meterFill { position: absolute; inset: 0; background: linear-gradient(90deg, var(--oker), var(--tyttebaer)); transform-origin: left; transform: scaleX(0); }
+  .goal-line { position: absolute; top: 0; bottom: 0; left: 65%; width: 3px; background: var(--lys); }
+  .tbar { height: 6px; border-radius: 99px; background: var(--natt); overflow: hidden; }
+  #meterTime { display: block; height: 100%; background: var(--mose); transform-origin: left; }
+  details { border-top: 1px solid rgba(227, 169, 60, .3); padding-top: 8px; }
+  summary { cursor: pointer; font-weight: 700; color: var(--oker); }
+  .voice-row { display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; align-items: center; margin-top: 10px; }
+  .voice-row label { grid-column: 1 / -1; font-size: .9rem; color: var(--dempet); }
+  .voice-row select { min-width: 0; font: 600 .95rem var(--f-body); color: var(--blekk); background: var(--lys); border: 2px solid var(--oker); border-radius: 10px; padding: 8px; }
+  .mini { min-height: 40px; padding: 6px 12px; border-radius: 10px; background: var(--gran-lys); border: 2px solid var(--oker); font-weight: 700; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div id="game">
+  <canvas id="c" aria-label="Huset der trollene bor"></canvas>
+  <div id="bubbles" aria-live="polite"></div>
+  <div id="flash"></div>
+  <div id="toast" role="status"></div>
+
+  <header id="hud" hidden>
+    <div id="status" class="pill"><span id="hearts"></span><span id="stars"></span><span id="night"></span></div>
+    <div id="goal" class="pill"></div>
+    <div class="hud-btns">
+      <button type="button" class="icon-btn" id="btnHint" aria-label="Spør pappa hvor bamsen er">📣</button>
+      <button type="button" class="icon-btn" id="btnBook" aria-label="Åpne trollboka">📖</button>
+      <button type="button" class="icon-btn" id="btnSound" aria-label="Slå av lyd">🔊</button>
+    </div>
+  </header>
+  <div id="inv" class="pill" hidden><small>Lomma</small><span id="invItems"></span></div>
+  <div id="chaseBar" hidden><span>LØP!</span><div class="track"><i id="chaseFill"></i></div></div>
+
+  <section id="dialog" hidden aria-live="polite">
+    <div class="panel">
+      <div class="dlg-head">
+        <img id="dlgPortrait" alt="">
+        <div>
+          <h2 id="dlgName"></h2>
+          <span id="dlgMood"></span>
+          <p id="dlgText"></p>
+        </div>
+      </div>
+      <div id="meter" hidden aria-hidden="true"><div class="mbar"><i id="meterFill"></i><b class="goal-line"></b></div><div class="tbar"><i id="meterTime"></i></div></div>
+      <div id="choices"></div>
+    </div>
+  </section>
+
+  <section id="screenTitle" class="screen">
+    <div class="panel">
+      <div id="peek" aria-hidden="true"></div>
+      <p class="eyebrow">Et eventyr i huset</p>
+      <h1>Troll i trappen</h1>
+      <p class="lead">Det er leggetid, og bamsen er borte. Men huset er fullt av troll! Noen må du løpe fra, noen kan du forhandle med, noen må du si «Gå vekk!» til, og noen vil bare være venner.</p>
+      <label class="field" for="heroName">Hva heter helten?
+        <input id="heroName" maxlength="16" autocomplete="off" placeholder="Skriv navnet her">
+      </label>
+      <fieldset>
+        <legend>Hårfarge</legend>
+        <label class="swatch"><input type="radio" name="hair" value="lys"><span style="--c:#e9c46a"></span>Lyst</label>
+        <label class="swatch"><input type="radio" name="hair" value="brun"><span style="--c:#7b4a27"></span>Brunt</label>
+        <label class="swatch"><input type="radio" name="hair" value="mork"><span style="--c:#2f2520"></span>Mørkt</label>
+        <label class="swatch"><input type="radio" name="hair" value="rod"><span style="--c:#b6532b"></span>Rødt</label>
+      </fieldset>
+      <label class="toggle"><input type="checkbox" id="voiceToggle" checked> Les høyt for meg</label>
+      <details id="voiceSettings" hidden>
+        <summary>Reservestemmer</summary>
+        <p class="muted">Brukes bare når en innspilt replikk mangler.</p>
+        <div class="voice-row"><label for="voiceTroll">Trollene og pappa</label><select id="voiceTroll"></select><button type="button" class="mini" id="tryTroll">▶ Prøv</button></div>
+        <div class="voice-row"><label for="voiceKid">Helten</label><select id="voiceKid"></select><button type="button" class="mini" id="tryKid">▶ Prøv</button></div>
+        <p class="muted">Stemmene kommer fra enheten. Navn med «Natural», «Neural» eller «Enhanced» høres best ut.</p>
+      </details>
+      <p id="voiceNote" class="muted" hidden>Fant ingen norsk stemme på denne enheten, så opplesningen kan høres rar ut.</p>
+      <div class="row">
+        <button type="button" id="btnStart" class="btn primary">Start eventyret</button>
+        <button type="button" id="btnBook2" class="btn">📖 Trollboka</button>
+      </div>
+      <p class="muted">Trykk eller hold fingeren der du vil gå. På tastatur: piltaster eller WASD. Står du fast, trykk 📣 og spør pappa.</p>
+    </div>
+  </section>
+
+  <section id="screenEnd" class="screen" hidden>
+    <div class="panel">
+      <p class="big-emoji" id="endEmoji" aria-hidden="true"></p>
+      <h2 id="endTitle"></h2>
+      <p class="lead" id="endText"></p>
+      <p id="endStats"></p>
+      <div class="row">
+        <button type="button" id="btnAgain" class="btn primary">Spill igjen</button>
+        <button type="button" id="btnBook3" class="btn">📖 Trollboka</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screenBook" class="screen" hidden>
+    <div class="panel book">
+      <h2>Trollboka</h2>
+      <p class="muted" id="bookSummary"></p>
+      <div id="bookGrid"></div>
+      <button type="button" id="btnCloseBook" class="btn primary">Lukk</button>
+    </div>
+  </section>
+</div>
+
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+<script type="module" src="js/main.js"></script>
