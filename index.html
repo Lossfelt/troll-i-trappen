@@ -13,10 +13,12 @@
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://lossfelt.github.io/troll-i-trappen/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23203328'/%3E%3Ccircle cx='32' cy='36' r='18' fill='%237f8f5c'/%3E%3Cellipse cx='32' cy='42' rx='5' ry='7' fill='%236b7a4b'/%3E%3Ccircle cx='25' cy='31' r='4' fill='%23fff'/%3E%3Ccircle cx='39' cy='31' r='4' fill='%23fff'/%3E%3Ccircle cx='25' cy='32' r='2' fill='%23111'/%3E%3Ccircle cx='39' cy='32' r='2' fill='%23111'/%3E%3Cpath d='M28 10l4 10 4-10' fill='%232f5a2e'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Grandstander:wght@600;800&display=swap">
+<link rel="preload" href="vendor/fonts/grandstander-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  /* Fontene ligger i repoet (OFL-lisens, se vendor/fonts), så ingen besøkende sendes til Google */
+  @font-face { font-family: 'Andika'; font-style: normal; font-weight: 400; font-display: swap; src: url(vendor/fonts/andika-400-latin.woff2) format('woff2'); }
+  @font-face { font-family: 'Andika'; font-style: normal; font-weight: 700; font-display: swap; src: url(vendor/fonts/andika-700-latin.woff2) format('woff2'); }
+  @font-face { font-family: 'Grandstander'; font-style: normal; font-weight: 600 800; font-display: swap; src: url(vendor/fonts/grandstander-latin.woff2) format('woff2'); }
   :root {
     /* Layout: fullskjerms 3D-hus om kvelden; HUD øverst, møtepanel nederst som malte granplater med okerkant */
     --natt: #141b2b;
@@ -315,6 +317,6 @@
 </div>
 
 <script type="importmap">
-  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+  { "imports": { "three": "./vendor/three/three.module.min.js" } }
 </script>
 <script type="module" src="js/main.js"></script>
