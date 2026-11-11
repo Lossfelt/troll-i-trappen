@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "serve": "node serve.mjs",
-    "audio": "node tools/generate-audio.mjs"
+    "audio": "node tools/generate-audio.mjs",
+    "check": "node tools/check.mjs"
   }
 }

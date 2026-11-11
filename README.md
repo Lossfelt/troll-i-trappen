@@ -51,6 +51,8 @@ Bytt stemme for en figur i `CAST` øverst i `tools/generate-audio.mjs`. Det som 
 
 Spillet er helt statisk og trenger ingen backend. Arbeidsflyten `.github/workflows/pages.yml` publiserer til GitHub Pages hver gang du pusher til `main`. Før opplasting får alle JavaScript-modulene commit-ID-en som versjon (`tools/stamp-version.mjs`). GitHub Pages lar nettlesere bufre filer i 10 minutter, og uten versjon kunne en telefon blande gammel og ny kode. Navn og trollbok ligger bare i spillerens nettleser (`localStorage`).
 
+`.github/workflows/ci.yml` kjører `node tools/check.mjs` (eller `npm run check`) på hver pull request og push til `main`. Den sjekker syntaks, JSON, at alle lydfiler i `audio/manifest.json` finnes, import-er, lenker og versjonsmerkingen. Dependabot holder versjonene av actions oppdatert, og minor- og patch-oppdateringer flettes og publiseres automatisk når sjekken er grønn.
+
 Spillet kan legges på Hjem-skjermen på mobil (`manifest.webmanifest`) og åpnes da i fullskjerm.
 
 Ikonene og delingsbildet i `icons/` er laget med OpenAI sitt bilde-API: `node tools/generate-images.mjs` lager originalene (krever `OPENAI_API_KEY`), og `tools/resize-images.ps1` skalerer dem til riktige størrelser.
