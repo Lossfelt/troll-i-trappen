@@ -1,0 +1,53 @@
+# Sjekker spillet på hver pull request og push til main (se tools/check.mjs):
+# syntaks i alle skript, JSON-filene, at alle lydfiler i audio/manifest.json
+# finnes, relative import-er, lokale lenker i index.html, ikonene i
+# manifest.webmanifest og at versjonsmerkingen ved publisering virker.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sjekk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Sjekk at spillet henger sammen
+        run: node tools/check.mjs
+
+  # Fletter Dependabot-PR-er automatisk når CI er grønn, men bare minor- og
+  # patch-oppdateringer. Major-hopp blir liggende for manuell testing.
+  # Flettes direkte i stedet for med "gh pr merge --auto", slik at det ikke
+  # krever branch protection eller "Allow auto-merge" i repoet.
+  #
+  # En fletting gjort med GITHUB_TOKEN starter ikke andre arbeidsflyter, så
+  # push-utløseren i pages.yml slår ikke til. Derfor startes publiseringen
+  # eksplisitt etterpå (workflow_dispatch er tillatt med GITHUB_TOKEN).
+  dependabot-fletting:
+    needs: sjekk
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - id: metadata
+        uses: dependabot/fetch-metadata@v3
+      - id: flett
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge "$PR_URL" --squash --delete-branch
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publiser på GitHub Pages
+        if: steps.flett.outcome == 'success'
+        run: gh workflow run pages.yml --ref main
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
