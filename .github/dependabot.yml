@@ -1,0 +1,19 @@
+# Dependabot-konfigurasjon.
+#
+# Spillet har ingen npm-avhengigheter (three.js og fontene ligger i vendor/),
+# så det eneste Dependabot kan følge med på er versjonene av actions i
+# .github/workflows. Minor- og patch-oppdateringer samles i én PR.
+# Major-oppdateringer kommer som egne PR-er og flettes ikke automatisk.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Oslo
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        update-types: ["minor", "patch"]
