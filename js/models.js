@@ -36,15 +36,35 @@ const tint = (hex, k) => new THREE.Color(hex).lerp(new THREE.Color(k > 0 ? 0xfff
 
 export const HAIR = { lys: 0xe9c46a, brun: 0x7b4a27, mork: 0x2f2520, rod: 0xb6532b };
 
-export function makeKid(hairKey = 'brun') {
-  const PJ = 0x4f7fd1, SKIN = 0xf4c9a7, HAIRC = HAIR[hairKey] ?? HAIR.brun;
+/** Pysjer. `need` er hvor mange stjerner som må samles før den kan velges. */
+export const PJS = {
+  bla: { name: 'Blå', c: 0x4f7fd1, dots: 0xffd84a, need: 0 },
+  rod: { name: 'Rød', c: 0xd1574f, dots: 0xffffff, need: 3 },
+  gronn: { name: 'Grønn', c: 0x4fa56b, dots: 0xffe08a, need: 8 },
+  lilla: { name: 'Lilla', c: 0x8b63c9, dots: 0xffd84a, need: 15 },
+  super: { name: 'Superhelt', c: 0xf2b632, dots: 0xd1352b, need: 25, cape: 0xd1352b },
+};
+
+export function makeKid(hairKey = 'brun', pjKey = 'bla') {
+  const pj = PJS[pjKey] ?? PJS.bla;
+  const PJ = pj.c, SKIN = 0xf4c9a7, HAIRC = HAIR[hairKey] ?? HAIR.brun;
   const group = new THREE.Group(), body = new THREE.Group();
   group.add(body);
   const legL = limb(0.085, 0.14, PJ, -0.09, 0.3, 0), legR = limb(0.085, 0.14, PJ, 0.09, 0.3, 0);
   for (const leg of [legL, legR]) leg.add(sph(0.075, 0xf7f3ea, 0, -0.29, 0.03, [1, 0.6, 1.35]));
   body.add(legL, legR);
   body.add(sph(0.2, PJ, 0, 0.48, 0, [1, 1.15, 0.9]));
-  body.add(sph(0.028, 0xffd84a, 0.08, 0.55, 0.17), sph(0.022, 0xffd84a, -0.07, 0.42, 0.18), sph(0.02, 0xffd84a, 0.03, 0.35, 0.18));
+  body.add(sph(0.028, pj.dots, 0.08, 0.55, 0.17), sph(0.022, pj.dots, -0.07, 0.42, 0.18), sph(0.02, pj.dots, 0.03, 0.35, 0.18));
+  let cape = null;
+  if (pj.cape) {
+    cape = new THREE.Group();
+    cape.position.set(0, 0.68, -0.15);
+    const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.46, 0.02), mat(pj.cape));
+    cloth.position.y = -0.23; cloth.castShadow = true;
+    cape.add(cloth);
+    cape.rotation.x = 0.25;
+    body.add(cape);
+  }
   const armL = limb(0.058, 0.15, PJ, -0.21, 0.62, 0), armR = limb(0.058, 0.15, PJ, 0.21, 0.62, 0);
   armL.add(sph(0.06, SKIN, 0, armL.userData.end, 0));
   armR.add(sph(0.06, SKIN, 0, armR.userData.end, 0));
@@ -57,9 +77,11 @@ export function makeKid(hairKey = 'brun') {
   const hair = new THREE.Mesh(new THREE.SphereGeometry(0.29, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.52), mat(HAIRC));
   hair.rotation.x = -0.45; hair.position.set(0, 0.02, -0.03); hair.castShadow = true;
   head.add(hair, sph(0.12, HAIRC, 0.03, 0.17, 0.17, [1.5, 0.5, 0.6]));
+  const eyes = [];
   for (const sx of [-1, 1]) {
-    head.add(sph(0.034, 0x2a1d17, sx * 0.09, 0.01, 0.245));
-    head.add(sph(0.012, 0xffffff, sx * 0.09 + 0.012, 0.025, 0.272));
+    const eye = sph(0.034, 0x2a1d17, sx * 0.09, 0.01, 0.245), glint = sph(0.012, 0xffffff, sx * 0.09 + 0.012, 0.025, 0.272);
+    head.add(eye, glint);
+    eyes.push({ eye, glint });
     head.add(sph(0.045, 0xf19b8b, sx * 0.16, -0.07, 0.19, [1, 0.6, 0.5]));
     head.add(sph(0.05, SKIN, sx * 0.265, 0, 0));
   }
@@ -67,7 +89,7 @@ export function makeKid(hairKey = 'brun') {
   const smile = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 12, Math.PI), mat(0x8a3a2e));
   smile.rotation.z = Math.PI; smile.position.set(0, -0.08, 0.25);
   head.add(smile);
-  return { group, body, head, legL, legR, armL, armR };
+  return { group, body, head, legL, legR, armL, armR, eyes, cape };
 }
 
 function buildHead(hg, L, SKIN, pupils, main) {
@@ -77,6 +99,7 @@ function buildHead(hg, L, SKIN, pupils, main) {
   for (const sx of [-1, 1]) {
     hg.add(sph(0.085 * e, 0xfdfbf2, sx * 0.14, 0.11, 0.3));
     const p = sph(0.045 * e, 0x1d1712, sx * 0.14, 0.11, 0.3 + 0.07 * e);
+    p.userData.base = p.position.clone();
     hg.add(p); pupils.push(p);
     if (L.lids) hg.add(sph(0.092 * e, SKIN, sx * 0.14, 0.15, 0.3, [1.05, 0.62, 1.05]));
     if (L.brows) {
@@ -167,6 +190,7 @@ export function makeTroll(look) {
     hg.position.set(x, y, z); hg.scale.setScalar(s);
     buildHead(hg, L, SKIN, pupils, i === (spots.length === 3 ? 1 : 0));
     if (spots.length === 3 && i !== 1) hg.rotation.z = i === 0 ? 0.25 : -0.25;
+    hg.userData.tilt = hg.rotation.z;
     body.add(hg); heads.push(hg);
   });
   return { group, body, heads, legL, legR, armL, armR, tail, pupils };

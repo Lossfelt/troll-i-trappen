@@ -1,4 +1,4 @@
-// Styrespak nede til høyre, trykk/hold på skjermen for å gå dit, eller piltaster/WASD.
+// Styrespak nede til høyre, trykk/hold på skjermen for å gå dit, eller piltaster/WASD. Mellomrom hopper.
 
 const STICK_RANGE = 48; // hvor langt knotten kan dras, i piksler
 const DEAD_ZONE = 0.15;
@@ -50,10 +50,10 @@ const KEYS = {
 
 export function createInput(canvas) {
   const keys = new Set();
-  const st = { down: false, x: 0, y: 0, dirty: false };
+  const st = { down: false, x: 0, y: 0, dirty: false, pressed: false, onJump: null };
 
   canvas.addEventListener('pointerdown', (e) => {
-    st.down = true; st.x = e.clientX; st.y = e.clientY; st.dirty = true;
+    st.down = true; st.x = e.clientX; st.y = e.clientY; st.dirty = true; st.pressed = true;
     try { canvas.setPointerCapture(e.pointerId); } catch { /* ignorer */ }
   });
   canvas.addEventListener('pointermove', (e) => {
@@ -66,6 +66,8 @@ export function createInput(canvas) {
 
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
+    // Mellomrom hopper, men ikke når en knapp har fokus (da trykker mellomrom på knappen)
+    if (e.code === 'Space' && !e.repeat && !e.target.closest?.('button, select, summary, a')) { e.preventDefault(); st.onJump?.(); }
     const k = KEYS[e.code];
     if (k) { keys.add(k); e.preventDefault(); }
   });

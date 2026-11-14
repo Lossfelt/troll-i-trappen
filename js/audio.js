@@ -2,7 +2,7 @@
 // ellers syntetiske lydeffekter og nettleserens talesyntese.
 import { KID, TROLL } from './lines.js';
 
-let ctx = null, master = null, voiceOut = null, sfxBus = null, soundOn = true, voiceOn = true, voices = [];
+let ctx = null, master = null, voiceOut = null, sfxBus = null, musicBus = null, soundOn = true, voiceOn = true, voices = [];
 let talking = 0; // antall replikker som spilles nå; da dempes musikk og effekter
 let manifest = { speech: {}, sfx: {} };
 const buffers = new Map();
@@ -25,6 +25,10 @@ export function initAudio() {
     voiceOut.connect(limiter);
     sfxBus = ctx.createGain();
     sfxBus.connect(ctx.destination);
+    // Musikken går gjennom effektbussen, så den også dempes når noen snakker
+    musicBus = ctx.createGain();
+    musicBus.gain.value = 0.5;
+    musicBus.connect(sfxBus);
   }
   ctx?.resume?.();
   // iOS slipper bare til tale som startes fra et trykk
@@ -33,6 +37,9 @@ export function initAudio() {
 }
 
 export function setSound(on) { soundOn = on; if (!on) stopSpeech(); }
+
+/** Utgang for bakgrunnsmusikken (js/music.js), eller null når lyden er av. */
+export function musicOut() { return ctx && soundOn && ctx.state === 'running' ? { ctx, out: musicBus } : null; }
 export function setVoice(on) { voiceOn = on; if (!on) stopSpeech(); }
 export function stopSpeech() {
   window.speechSynthesis?.cancel();
@@ -238,6 +245,18 @@ const synth = {
   burp: () => { tone(110, 0.45, { type: 'sawtooth', vol: 0.2, to: 70 }); noise(0.4, 0.15, 250); },
   snore: () => [0, 0.9].forEach((d) => tone(90, 0.6, { type: 'sawtooth', vol: 0.08, to: 70, delay: d })),
   night: () => [784, 659, 523, 587, 523, 392, 523].forEach((f, i) => tone(f, 0.5, { vol: 0.12, delay: i * 0.36 })),
+  // Leker og hopp
+  jump: () => tone(300, 0.2, { type: 'triangle', vol: 0.14, to: 620 }),
+  note: (freq) => { tone(freq, 0.7, { type: 'triangle', vol: 0.22 }); tone(freq * 2, 0.35, { vol: 0.07 }); },
+  boing: () => { tone(160, 0.28, { type: 'triangle', vol: 0.22, to: 420 }); tone(420, 0.2, { type: 'triangle', vol: 0.1, to: 250, delay: 0.12 }); },
+  quack: () => [0, 0.17].forEach((d) => tone(520, 0.12, { type: 'sawtooth', vol: 0.1, to: 340, delay: d })),
+  splash: () => noise(0.4, 0.22, 1800),
+  flush: () => { noise(1.3, 0.2, 600); tone(240, 1.2, { vol: 0.08, to: 70 }); },
+  clatter: () => [0, 0.07, 0.16, 0.28, 0.4].forEach((d) => tone(480 + Math.random() * 500, 0.06, { type: 'square', vol: 0.06, delay: d })),
+  neigh: () => [0, 0.09, 0.18, 0.27, 0.36].forEach((d, i) => tone(900 - i * 110, 0.1, { type: 'triangle', vol: 0.12, to: 760 - i * 110, delay: d })),
+  tv: () => [392, 523, 659].forEach((f, i) => tone(f, 0.14, { type: 'square', vol: 0.05, delay: i * 0.1 })),
+  // Små troll fniser lyst, store troll humrer mørkt
+  giggle: (size = 1) => [0, 0.11, 0.22, 0.33].forEach((d, i) => tone((560 - i * 30) / size, 0.09, { type: 'triangle', vol: 0.13, to: (640 - i * 30) / size, delay: d })),
 };
 
 // Vuggevisen er bakgrunnsmusikk under «God natt», så den skal ligge lavere enn effektene

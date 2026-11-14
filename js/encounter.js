@@ -1,7 +1,7 @@
 import { ITEMS } from './trolls.js';
 import { say, sfx, stopSpeech } from './audio.js';
 import { store } from './store.js';
-import { burst } from './fx.js';
+import { burst, sparkle } from './fx.js';
 import { makeItem } from './models.js';
 import { startChase, startLeave } from './actors.js';
 import * as ui from './ui.js';
@@ -48,8 +48,8 @@ export function createEncounters(G) {
       { icon: '✋', label: 'Gå vekk!', act: shout },
       { icon: '👋', label: 'Hei, troll!', act: () => resolve('friend') },
     ];
-    const f = G.follower;
-    if (f && !f.helped && f !== cur) list.push({ icon: '💚', label: `Spør ${f.def.name}`, cls: 'friend', act: askFriend });
+    const f = G.friends.helper(cur);
+    if (f) list.push({ icon: '💚', label: `Spør ${f.def.name}`, cls: 'friend', act: askFriend });
     return list;
   }
 
@@ -96,7 +96,7 @@ export function createEncounters(G) {
   }
 
   async function askFriend() {
-    const t = cur, f = G.follower, my = ++token;
+    const t = cur, f = G.friends.helper(cur), my = ++token;
     f.helped = true;
     ui.setChoices([]);
     const ask = KID.askHelp(f.def.id);
@@ -109,34 +109,36 @@ export function createEncounters(G) {
     f.react = 'win'; f.reactT = 1.5;
     await say(line, f.def.id);
     if (my !== token) return;
-    respond(t, 'win', TROLL.helpReply, my, true);
+    respond(t, 'win', TROLL.helpReply, my);
   }
 
-  function respond(t, outcome, text, my, helped = false) {
+  function respond(t, outcome, text, my) {
     t.react = outcome; t.reactT = 2.5;
     sfx[SOUND[outcome]]();
     ui.dialogLine(t.def.name, text, 'troll');
     const chase = outcome === 'chase';
     setTimeout(() => {
       if (my !== token) return;
-      ui.setChoices([{ icon: chase ? '🏃' : '▶️', label: chase ? 'LØP!' : 'Videre', cls: 'primary', act: () => finish(outcome, helped) }]);
+      ui.setChoices([{ icon: chase ? '🏃' : '▶️', label: chase ? 'LØP!' : 'Videre', cls: 'primary', act: () => finish(outcome) }]);
     }, 450);
     say(text, t.def.id);
   }
 
-  function finish(outcome, helped) {
+  function finish(outcome) {
     stopSpeech();
     ui.closeDialog();
     token++;
     const t = cur;
     cur = null;
-    apply(t, outcome, helped);
+    apply(t, outcome);
   }
 
   function celebrate(t) {
     const aw = t.def.afterWin;
     G.kidAnim('dance');
-    burst(G.scene, t.pos, 0xffd76a, 26);
+    burst(G.scene, t.pos, 0xffd76a, 20);
+    sparkle(G.scene, t.pos, '💚', 7, { lift: t.h * 0.6 });
+    G.friends.hopAll();
     if (!aw) return;
     setTimeout(() => {
       if (t.state === 'gone') return;
@@ -151,7 +153,7 @@ export function createEncounters(G) {
     }, 900);
   }
 
-  function apply(t, outcome, helped) {
+  function apply(t, outcome) {
     const def = t.def;
     G.mode = 'play';
     t.reactT = 0;
@@ -168,12 +170,9 @@ export function createEncounters(G) {
         G.rebuildNav();
       } else if (def.sleeps) {
         t.state = 'sleep'; t.awake = false;
-      } else if (helped) {
-        startLeave(t, 3.5);
       } else {
-        if (G.follower) { G.trollSay(G.follower, TROLL.bye, 2600, true); startLeave(G.follower, 1.4); }
-        G.follower = t;
-        t.state = 'follow';
+        // Alle nye venner blir med i trolltoget
+        G.friends.add(t);
       }
     } else if (outcome === 'meh') {
       t.done = true;

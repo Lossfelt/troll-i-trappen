@@ -21,8 +21,12 @@ Under jakt kan du gjemme deg under kjøkkenbordet eller i teltet på lekerommet.
 Mer moro:
 
 - «Gå vekk!» er et rope-spill: trykk fort for å rope høyt nok. Sinnatrollet gir seg bare for et skikkelig rop.
-- Noen troll gjemmer seg under gulvet og spretter opp med et «BØ!» når du kommer nær.
-- En trollvenn som følger deg, kan hjelpe én gang («Spør …»), og da blir det andre trollet også venn.
+- Noen troll gjemmer seg under gulvet og spretter opp med et «BØ!» når du kommer nær. Den som ser nøye etter, ser hårtusten som stikker opp.
+- Trolltoget: alle trollvennene går på rekke etter deg. Hver venn kan hjelpe én gang («Spør …»), og da blir det andre trollet også venn. Trykk på en venn for å kile den.
+- Hopp med 🦘-knappen, mellomrom eller et trykk på gutten. Trollvennene hopper etter i en bølge.
+- Leker i huset: spark badeballene, tråkk på pianomatta, velt klossetårnet, dytt gyngehesten, plask med badeanda, trekk ned på do og slå på TV-en. Et lite ✨ viser leker som ikke er prøvd ennå.
+- Når du kommer opp trappen med bamsen, hopper gutten til sengs, lyset dempes, og trollvennene vinker god natt.
+- Stjernene du samler, låser opp nye pysjer på startskjermen (3, 8, 15 og 25 stjerner).
 - Hver natt du klarer, kommer det ett troll til neste natt.
 - 📣 spør pappa hvilket rom bamsen er i.
 
@@ -49,7 +53,7 @@ Bytt stemme for en figur i `CAST` øverst i `tools/generate-audio.mjs`. Det som 
 
 ## Publisering
 
-Spillet er helt statisk og trenger ingen backend. Arbeidsflyten `.github/workflows/pages.yml` publiserer til GitHub Pages hver gang du pusher til `main`. Før opplasting får alle JavaScript-modulene commit-ID-en som versjon (`tools/stamp-version.mjs`). GitHub Pages lar nettlesere bufre filer i 10 minutter, og uten versjon kunne en telefon blande gammel og ny kode. Navn og trollbok ligger bare i spillerens nettleser (`localStorage`).
+Spillet er helt statisk og trenger ingen backend. Arbeidsflyten `.github/workflows/pages.yml` publiserer til GitHub Pages hver gang du pusher til `main`. Før opplasting får alle JavaScript-modulene commit-ID-en som versjon (`tools/stamp-version.mjs`). GitHub Pages lar nettlesere bufre filer i 10 minutter, og uten versjon kunne en telefon blande gammel og ny kode. Navn, trollbok og stjerner ligger bare i spillerens nettleser (`localStorage`).
 
 Spillet kan legges på Hjem-skjermen på mobil (`manifest.webmanifest`) og åpnes da i fullskjerm.
 
@@ -68,15 +72,22 @@ node serve.mjs
 ## Struktur
 
 - `index.html`: markup og stil for HUD, dialog og skjermer
-- `js/main.js`: oppstart, kamera, hovedløkke og knapper
+- `js/main.js`: oppstart, hovedløkke og slutt på natta
+- `js/menu.js`, `js/ui.js`: startskjerm, trollbok, HUD og dialog
+- `js/camera.js`: kamera som følger gutten, og låses i leggescenen
 - `js/round.js`: én natt: plassering av troll og ting, og opplukking
 - `js/trolls.js`: trolltyper, replikker og utfall (her endrer du innholdet)
 - `js/lines.js`: alle andre replikker som leses høyt
 - `tools/generate-audio.mjs`: lager stemmer og lyder med ElevenLabs
 - `js/encounter.js`: møteflyt og utfall
-- `js/actors.js`: trollenes oppførsel og jakt
+- `js/actors.js`, `js/trollanim.js`: trollenes oppførsel, jakt og animasjon
+- `js/friends.js`: trolltoget
+- `js/toys.js`: lekene i huset
+- `js/ending.js`: leggescenen
+- `js/music.js`: spilledåsemusikk som lages i nettleseren
 - `js/kid.js`, `js/models.js`: gutten og figurene
 - `js/house.js`, `js/furniture.js`: huset, kollisjon og gjemmesteder
+- `js/decor.js`, `js/garden.js`, `js/world.js`: pynt, hage og kveldslys
 - `js/physics.js`: kollisjon og A*-stifinning
 
 three.js lastes fra jsDelivr (versjon 0.170.0). Navn og trollbok lagres i `localStorage`. Opplesning bruker nettleserens talesyntese med norsk stemme når enheten har en.

@@ -5,13 +5,60 @@ import { store } from './store.js';
 export const $ = (id) => document.getElementById(id);
 export const show = (id, on = true) => { $(id).hidden = !on; };
 
+/** Spiller av en CSS-animasjon på nytt ved å ta klassen av og på. */
+function replay(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+/** Setter teksten, og lar elementet sprette hvis den endret seg. */
+function setText(id, text) {
+  const el = $(id);
+  if (el.textContent === text) return;
+  const first = !el.textContent;
+  el.textContent = text;
+  if (!first) replay(el, 'pop');
+}
+
 export function updateHud(G) {
-  $('hearts').textContent = '❤️'.repeat(Math.max(0, G.hearts)) + '🤍'.repeat(Math.max(0, 3 - G.hearts));
-  $('stars').textContent = `⭐ ${G.stars}`;
-  $('night').textContent = `🌙 ${G.night}`;
-  $('goal').textContent = G.hasBamse ? '🛏️ Gå opp trappen til senga' : '🧸 Finn bamsen';
-  $('invItems').textContent = G.inv.map((id) => ITEMS[id].emoji).join(' ');
+  setText('hearts', '❤️'.repeat(Math.max(0, G.hearts)) + '🤍'.repeat(Math.max(0, 3 - G.hearts)));
+  setText('stars', `⭐ ${G.stars}`);
+  setText('night', `🌙 ${G.night}`);
+  setText('goal', G.hasBamse ? '🛏️ Gå opp trappen til senga' : '🧸 Finn bamsen');
+  setText('invItems', G.inv.map((id) => ITEMS[id].emoji).join(' '));
   $('inv').hidden = !G.inv.length;
+  const n = G.friends?.list.length || 0;
+  $('train').hidden = !n;
+  setText('trainCount', `💚 ${n}`);
+}
+
+/** Stort kort midt på skjermen når en ny natt begynner. */
+export function nightCard(night) {
+  $('nightCardText').textContent = `Natt ${night}`;
+  $('nightCard').hidden = false;
+  replay($('nightCard'), 'show');
+}
+
+/** Toner til svart, kjører `swap` mens skjermen er mørk, og toner inn igjen. */
+export function fadeThrough(swap) {
+  const el = $('fade');
+  el.classList.add('on');
+  setTimeout(() => { swap(); el.classList.remove('on'); }, 300);
+}
+
+/** En stjerne flyr fra et punkt på skjermen opp til stjernetelleren. */
+export function flyStar(x, y) {
+  const to = $('stars').getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'fly-star';
+  el.textContent = '⭐';
+  el.style.transform = `translate(${x}px, ${y}px) scale(1.8)`;
+  $('game').append(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transform = `translate(${to.left + 4}px, ${to.top}px) scale(.7)`;
+  }));
+  setTimeout(() => el.remove(), 800);
 }
 
 let toastTimer = 0;
@@ -23,12 +70,7 @@ export function toast(text, ms = 1600) {
   toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
-export function flash() {
-  const el = $('flash');
-  el.classList.remove('on');
-  void el.offsetWidth;
-  el.classList.add('on');
-}
+export function flash() { replay($('flash'), 'on'); }
 
 // --- Snakkebobler som følger figurene ---
 const bubbles = new Map();
@@ -116,7 +158,7 @@ export function shoutGame(onLevel) {
       if (done) return;
       level = Math.min(1, level + 0.18);
       onLevel(level);
-      b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+      replay(b, 'pop');
     };
     b.addEventListener('pointerdown', tap);
     b.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') tap(e); });
@@ -166,5 +208,5 @@ export function renderBook(portraits) {
     }
     grid.append(card);
   }
-  $('bookSummary').textContent = `Du har møtt ${met} av ${Object.keys(TROLLS).length} troll.`;
+  $('bookSummary').textContent = `Du har møtt ${met} av ${Object.keys(TROLLS).length} troll og samlet ⭐ ${store.get().stars} stjerner.`;
 }

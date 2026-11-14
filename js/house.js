@@ -1,20 +1,22 @@
 import * as THREE from 'three';
 import { mat, matUnique, glow } from './world.js';
 import { addKitchen, addLiving, addBath, addPlayroom } from './furniture.js';
+import { addDecor } from './decor.js';
 
 // Huset sett ovenfra (x mot høyre, z mot kamera):
 //   Kjøkken | Stue
 //   Lekerom | Gang med trapp | Bad
 export const WALL_H = 2.4;
 const T = 0.2;
-const WALL = 0xe8d9bf;
+const WALL = 0xf3ead8;
+const OUTSIDE = 0x9b3d2e; // rødmalt hus sett utenfra
 
 export const ROOMS = [
-  { id: 'kjokken', name: 'Kjøkkenet', minX: -12, maxX: -2, minZ: -9, maxZ: 0, floor: 'tiles', c1: 0xe3d8c0, c2: 0xc4b48f },
-  { id: 'stue', name: 'Stua', minX: -2, maxX: 12, minZ: -9, maxZ: 0, floor: 'planks', c1: 0xb57d4a },
-  { id: 'lekerom', name: 'Lekerommet', minX: -12, maxX: -4, minZ: 0, maxZ: 9, floor: 'carpet', c1: 0x7aa36a },
-  { id: 'gang', name: 'Gangen', minX: -4, maxX: 4, minZ: 0, maxZ: 9, floor: 'planks', c1: 0x9a6640 },
-  { id: 'bad', name: 'Badet', minX: 4, maxX: 12, minZ: 0, maxZ: 9, floor: 'tiles', c1: 0xd6e8ee, c2: 0xa3c8d4 },
+  { id: 'kjokken', name: 'Kjøkkenet', minX: -12, maxX: -2, minZ: -9, maxZ: 0, floor: 'tiles', c1: 0xe3d8c0, c2: 0xc4b48f, wall: 0xf1dc9c },
+  { id: 'stue', name: 'Stua', minX: -2, maxX: 12, minZ: -9, maxZ: 0, floor: 'planks', c1: 0xb57d4a, wall: 0xb7cdb0 },
+  { id: 'lekerom', name: 'Lekerommet', minX: -12, maxX: -4, minZ: 0, maxZ: 9, floor: 'carpet', c1: 0x7aa36a, wall: 0xa9cfe6 },
+  { id: 'gang', name: 'Gangen', minX: -4, maxX: 4, minZ: 0, maxZ: 9, floor: 'planks', c1: 0x9a6640, wall: 0xecc9a4 },
+  { id: 'bad', name: 'Badet', minX: 4, maxX: 12, minZ: 0, maxZ: 9, floor: 'tiles', c1: 0xd6e8ee, c2: 0xa3c8d4, wall: 0xb5e0d6 },
 ];
 export const START = { x: -1.2, z: 6.6 };
 export const STAIRS = { minX: 2.4, maxX: 4, bottomZ: 7.6, topZ: 3.0, height: 2.0, steps: 8 };
@@ -38,15 +40,13 @@ export function roomAt(x, z) {
 export const inZone = (p, z) => p.x > z.minX && p.x < z.maxX && p.z > z.minZ && p.z < z.maxZ;
 
 export function buildHouse(scene) {
-  const h = { group: new THREE.Group(), boxes: [], walls: [], walkables: [], hideZones: [], blocker: null };
+  const h = { group: new THREE.Group(), boxes: [], walls: [], walkables: [], hideZones: [], lamps: [], blocker: null };
   scene.add(h.group);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), mat(0x1d2a24));
-  ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
-  h.group.add(ground);
   for (const room of ROOMS) addFloor(h, room);
   addWalls(h);
   addWindow(h, -8, true); addWindow(h, 6, false);
   addKitchen(h); addLiving(h); addBath(h); addPlayroom(h); addHall(h);
+  addDecor(h);
   return h;
 }
 
@@ -91,10 +91,13 @@ export function rug(h, w, d, color, x, z, round = false) {
   return m;
 }
 
-export function lamp(h, x, y, z, color = 0xffb866, intensity = 12) {
-  const light = new THREE.PointLight(color, intensity, 9, 1.6);
+/** Lampe. `flicker` får lyset til å blafre som en peis, `night` blir stående på når det er natt. */
+export function lamp(h, x, y, z, color = 0xffb866, intensity = 12, { flicker = 0, night = false, reach = 9 } = {}) {
+  const light = new THREE.PointLight(color, intensity, reach, 1.6);
   light.position.set(x, y, z);
   h.group.add(light);
+  h.lamps.push({ light, base: intensity, flicker, night });
+  return light;
 }
 
 function floorTexture(room) {
@@ -143,14 +146,21 @@ function addFloor(h, room) {
 
 function wallSeg(h, horiz, fixed, a, b) {
   const len = b - a, mid = (a + b) / 2;
-  const material = matUnique(WALL, { transparent: true });
-  const m = new THREE.Mesh(new THREE.BoxGeometry(horiz ? len + T : T, WALL_H, horiz ? T : len + T), material);
+  // Hver side av veggen får fargen til rommet den vender mot; kanter og topp er lys list
+  const side = (d) => {
+    const room = horiz ? roomAt(mid, fixed + d) : roomAt(fixed + d, mid);
+    return matUnique(room ? room.wall : OUTSIDE, { transparent: true });
+  };
+  const trim = matUnique(WALL, { transparent: true }), plus = side(0.5), minus = side(-0.5);
+  // Rekkefølgen på sidene i BoxGeometry: +x, -x, +y, -y, +z, -z
+  const faces = horiz ? [trim, trim, trim, trim, plus, minus] : [plus, minus, trim, trim, trim, trim];
+  const m = new THREE.Mesh(new THREE.BoxGeometry(horiz ? len + T : T, WALL_H, horiz ? T : len + T), faces);
   m.position.set(horiz ? mid : fixed, WALL_H / 2, horiz ? fixed : mid);
   m.castShadow = true; m.receiveShadow = true;
   h.group.add(m);
   if (horiz) collider(h, a - T / 2, b + T / 2, fixed - T / 2, fixed + T / 2, 'both', { wall: true });
   else collider(h, fixed - T / 2, fixed + T / 2, a - T / 2, b + T / 2, 'both', { wall: true });
-  h.walls.push({ horiz, fixed, a, b, materials: [material], opacity: 1 });
+  h.walls.push({ horiz, fixed, a, b, materials: [trim, plus, minus], opacity: 1 });
 }
 
 function wallLine(h, axis, fixed, from, to, doors = []) {
@@ -211,7 +221,7 @@ function addHall(h) {
   ball(h, 0.09, 0x8a5a2e, 2.4, 1.15, 6.95);
   // Trappetrollet stenger veien til det er fornøyd
   h.blocker = collider(h, 2.3, 4.0, 6.9, 8.9, 'both');
-  lamp(h, cx, 3.1, 1.6, 0xffd27a, 10);
+  lamp(h, cx, 3.3, 1.9, 0xffd27a, 9, { night: true });
   // gang
   rug(h, 1.3, 5.2, 0xa0453a, -0.6, 4.6);
   box(h, 1.6, 0.4, 0.4, 0x6e4b33, -2.6, 0, 8.65, 'both');

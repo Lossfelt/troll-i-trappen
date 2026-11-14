@@ -1,6 +1,7 @@
 // Lagrer navn, valg og trollboka lokalt i nettleseren. Spillet virker uten.
 const KEY = 'troll-i-trappen-v1';
-const defaults = () => ({ name: '', hair: 'brun', voice: true, sound: true, book: {} });
+// stars er alle stjernene som er samlet til sammen; de låser opp nye pysjer
+const defaults = () => ({ name: '', hair: 'brun', pj: 'bla', stars: 0, voice: true, sound: true, book: {} });
 
 function load() {
   try {

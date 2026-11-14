@@ -2,7 +2,7 @@ import { makeItem, makeBamse } from './models.js';
 import { TROLLS, ITEMS } from './trolls.js';
 import { START, TRAPP_SPOT } from './house.js';
 import { spawnTroll, randomSpot } from './actors.js';
-import { burst } from './fx.js';
+import { burst, sparkle } from './fx.js';
 import { sfx } from './audio.js';
 import { store } from './store.js';
 import * as ui from './ui.js';
@@ -42,11 +42,12 @@ export function createRounds(G) {
     ui.clearBubbles();
     Object.assign(G, {
       trolls: [], items: [], hearts: 3, stars: 0, inv: [], hasBamse: false, friendsRound: 0,
-      follower: null, chase: null, path: null, room: null, hintT: 0,
+      chase: null, path: null, room: null, hintT: 0,
     });
+    G.friends.reset();
     K.pos.set(START.x, 0, START.z);
     K.yaw = Math.PI;
-    K.rebuild(store.get().hair);
+    K.rebuild(store.get().hair, store.get().pj);
     G.house.blocker.off = false;
     G.rebuildNav();
 
@@ -84,7 +85,10 @@ export function createRounds(G) {
       const b = makeBamse();
       b.scale.setScalar(0.85); b.position.set(0, 0.3, 0.2);
       K.m.body.add(b);
+      K.m.bamse = b;
       sfx.win();
+      sparkle(G.scene, it.pos, '⭐', 12);
+      G.friends.hopAll();
       G.kidAnim('dance');
       G.kidSay(KID.bamse);
     } else {
